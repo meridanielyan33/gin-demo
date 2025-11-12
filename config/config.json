@@ -1,0 +1,17 @@
+{
+  "development": {
+    "redis": {
+      "addr": "localhost:6379",
+      "password": ""
+    },
+    "cookie": {
+      "domain": "localhost"
+    }
+  },
+  "database": {
+    "host": "localhost",
+    "port": "3306",
+    "user": "root",
+    "name": "gin_demo"
+  }
+}

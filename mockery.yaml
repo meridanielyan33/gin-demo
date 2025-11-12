@@ -1,0 +1,20 @@
+version: 2
+issue-845-fix: true
+
+packages:
+  gin-demo/repository:
+    config:
+      dir: repository
+      output: mocks
+      outpkg: mocks
+      with-expecter: true
+    interfaces:
+      - name: UserRepository
+  gin-demo/service:
+    config:
+      dir: service
+      output: mocks
+      outpkg: mocks
+      with-expecter: true
+    interfaces:
+      - name: UserService
