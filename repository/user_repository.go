@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"fmt"
 	"gin-demo/model"
 
 	"gorm.io/gorm"
@@ -22,6 +23,19 @@ func NewUserRepository(db *gorm.DB) UserRepository {
 }
 
 func (r *userRepo) CreateUser(user *model.User) error {
+	var existingUser model.User
+	if err := r.db.Where("username = ?", user.Username).First(&existingUser).Error; err == nil {
+		return fmt.Errorf("username already exists")
+	} else if err != gorm.ErrRecordNotFound {
+		return err
+	}
+
+	if err := r.db.Where("email = ?", user.Email).First(&existingUser).Error; err == nil {
+		return fmt.Errorf("email already exists")
+	} else if err != gorm.ErrRecordNotFound {
+		return err
+	}
+
 	return r.db.Create(user).Error
 }
 
