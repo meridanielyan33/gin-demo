@@ -14,12 +14,14 @@ import (
 func SetupRouter(db *gorm.DB) *gin.Engine {
 	router := gin.Default()
 	router.SetTrustedProxies([]string{"0.0.0.0/0"})
+	jwtStrategy := middleware.NewJWTStrategy(redis_utils.GetRedisClient())
 	userRepo := repository.NewUserRepository(db)
-	userService := services.NewUserService(userRepo, redis_utils.GetRedisClient())
-	userHandler := handler.NewHandler(userService)
+	userService := services.NewUserService(userRepo, *jwtStrategy)
+	userServiceFacade := services.NewUserServiceFacade(userService)
+	userHandler := handler.NewHandler(*userServiceFacade)
 
 	protected := router.Group("/api")
-	protected.Use(middleware.AuthMiddleware(redis_utils.GetRedisClient()))
+	protected.Use(middleware.AuthMiddleware(*jwtStrategy))
 
 	router.POST("/api/login", userHandler.Login)
 	protected.POST("/users", userHandler.Register)

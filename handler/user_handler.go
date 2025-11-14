@@ -2,7 +2,6 @@ package handler
 
 import (
 	err "gin-demo/errors"
-	"gin-demo/middleware"
 	"gin-demo/model"
 	"gin-demo/redis_utils"
 	services "gin-demo/service"
@@ -14,12 +13,12 @@ import (
 )
 
 type Handler struct {
-	services.UserService
+	userServiceFacade services.UserServiceFacade
 }
 
-func NewHandler(userService services.UserService) *Handler {
+func NewHandler(userService services.UserServiceFacade) *Handler {
 	return &Handler{
-		UserService: userService,
+		userServiceFacade: userService,
 	}
 }
 func (h *Handler) Login(c *gin.Context) {
@@ -29,14 +28,13 @@ func (h *Handler) Login(c *gin.Context) {
 		return
 	}
 
-	res, er := h.UserService.Login(&req)
+	res, er := h.userServiceFacade.Login(c, &req)
 	if er != nil {
 		c.JSON(http.StatusForbidden, gin.H{"error": er.Error()})
 		return
 	}
 
 	authHeader := "Bearer " + res.JWTToken
-
 	http.SetCookie(c.Writer, &http.Cookie{
 		Name:     "token",
 		Value:    authHeader,
@@ -55,18 +53,19 @@ func (h *Handler) Login(c *gin.Context) {
 }
 
 func (h *Handler) Logout(c *gin.Context) {
-	claims, exists := c.Get("claims")
-	email := claims.(*middleware.Claims).Email
+	emailVal, exists := c.Get("email")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.UserNotAuthenticated})
 		return
 	}
-
-	logoutReq := &model.UserLogoutRequest{
-		Email: email,
+	email, ok := emailVal.(string)
+	if !ok || email == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.AuthHeaderMissing})
+		return
 	}
 
-	logoutRes, er := h.UserService.Logout(logoutReq)
+	logoutReq := &model.UserLogoutRequest{Email: email}
+	logoutRes, er := h.userServiceFacade.Logout(c, logoutReq)
 	if er != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": er.Error()})
 		return
@@ -83,34 +82,43 @@ func (h *Handler) Register(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": er.Error()})
 		return
 	}
-	err := h.UserService.Register(&req)
-	if err != nil {
-		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+
+	if er := h.userServiceFacade.Register(&req); er != nil {
+		c.JSON(http.StatusForbidden, gin.H{"error": er.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "Registered successfully"})
 }
 
 func (h *Handler) GetUsers(c *gin.Context) {
-	claims, _ := c.Get("claims")
-	email := claims.(*middleware.Claims).Email
-	users := h.UserService.GetUsers(email)
+	emailVal, exists := c.Get("email")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.UserNotAuthenticated})
+		return
+	}
+	email := emailVal.(string)
+
+	users := h.userServiceFacade.GetUsers(email)
 	c.JSON(http.StatusOK, gin.H{
 		"All registered users": users,
 	})
 }
 
 func (h *Handler) GetAuthenticatedUser(c *gin.Context) {
-	claims, _ := c.Get("claims")
-	email := claims.(*middleware.Claims).Email
-	user, err := h.UserService.GetUserByEmail(email)
-	if err != nil {
-		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+	emailVal, exists := c.Get("email")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.UserNotAuthenticated})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{
-		"User data": user,
-	})
+	email := emailVal.(string)
+
+	user, er := h.userServiceFacade.GetUserByEmail(email)
+	if er != nil {
+		c.JSON(http.StatusForbidden, gin.H{"error": er.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"User data": user})
 }
 
 func (h *Handler) GetUserById(c *gin.Context) {
@@ -119,8 +127,9 @@ func (h *Handler) GetUserById(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format — only digits are allowed"})
 		return
 	}
-	user, err := h.UserService.GetUserById(idParam)
-	if err != nil {
+
+	user, er := h.userServiceFacade.GetUserById(idParam)
+	if er != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 		return
 	}
@@ -135,7 +144,5 @@ func (h *Handler) GetUserById(c *gin.Context) {
 		UpdatedAt: user.UpdatedAt,
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"user": userData,
-	})
+	c.JSON(http.StatusOK, gin.H{"user": userData})
 }

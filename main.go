@@ -18,7 +18,7 @@ func main() {
 		log.Fatalf("Error loading config: %v", err)
 	}
 
-	db, err := NewDatabase(config.GetConfig())
+	db, err := GetDB(config.GetConfig())
 	if err != nil {
 		log.Fatalf("could not initialize database connection: %s", err)
 	}

@@ -3,15 +3,13 @@ package middleware
 import (
 	"context"
 	errMessage "gin-demo/errors"
-	"log"
 	"net/http"
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/redis/go-redis/v9"
 )
 
-func AuthMiddleware(redisClient *redis.Client) gin.HandlerFunc {
+func AuthMiddleware(strategy JWTStrategy) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var tokenString string
 
@@ -30,7 +28,7 @@ func AuthMiddleware(redisClient *redis.Client) gin.HandlerFunc {
 			return
 		}
 
-		claims, err := ValidateAccessToken(tokenString, redisClient)
+		claims, err := strategy.ValidateAccessToken(context.Background(), tokenString)
 		if err != nil {
 			if err.Error() == "token not found in Redis" {
 				c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": errMessage.LoggedOut})
@@ -48,26 +46,7 @@ func AuthMiddleware(redisClient *redis.Client) gin.HandlerFunc {
 			return
 		}
 
-		c.Set("claims", claims)
+		c.Set("email", claims.Email)
 		c.Next()
-	}
-}
-
-func InvalidateToken(c *gin.Context, email string, redisClient *redis.Client) {
-	val, err := redisClient.Get(context.Background(), email).Result()
-	if err != nil && err != redis.Nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": errMessage.RedisTokenFail})
-		return
-	}
-
-	if val != "" {
-		err := redisClient.Del(context.Background(), email).Err()
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": errMessage.TokenDeleteFailRedis})
-			return
-		}
-		log.Printf("User with email %v logged out successfully. Session invalidated.", email)
-	} else {
-		log.Printf("No active session found for user with email %v.", email)
 	}
 }

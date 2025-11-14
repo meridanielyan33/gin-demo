@@ -9,7 +9,6 @@ import (
 	"gin-demo/repository"
 	"time"
 
-	"github.com/redis/go-redis/v9"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -27,15 +26,16 @@ type UserData struct {
 	Email     string    `json:"email"`
 	CreatedAt time.Time `json:"created_at"`
 }
+
 type userService struct {
-	rdb  *redis.Client
-	repo repository.UserRepository
+	repo          repository.UserRepository
+	tokenStrategy middleware.JWTStrategy
 }
 
-func NewUserService(repo repository.UserRepository, rdb *redis.Client) UserService {
+func NewUserService(repo repository.UserRepository, tokenStrategy middleware.JWTStrategy) UserService {
 	return &userService{
-		repo: repo,
-		rdb:  rdb,
+		repo:          repo,
+		tokenStrategy: tokenStrategy,
 	}
 }
 
@@ -59,14 +59,9 @@ func (s *userService) Login(loginRequest *model.UserLoginRequest) (*model.UserLo
 		return nil, errors.New("invalid credentials")
 	}
 
-	accessToken, err := middleware.GenerateAccessToken(loginRequest.Email)
+	accessToken, err := s.tokenStrategy.GenerateAccessToken(context.Background(), loginRequest.Email)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate access token: %w", err)
-	}
-
-	err = s.rdb.Set(context.Background(), loginRequest.Email, accessToken, 8*time.Hour).Err()
-	if err != nil {
-		return nil, fmt.Errorf("failed to store access token in Redis: %w", err)
 	}
 
 	response := model.UserLoginResponse{
@@ -85,9 +80,9 @@ func (s *userService) Logout(logoutRequest *model.UserLogoutRequest) (*model.Use
 		return nil, fmt.Errorf("user %s not found", logoutRequest.Email)
 	}
 
-	err = s.rdb.Del(context.Background(), logoutRequest.Email).Err()
+	err = s.tokenStrategy.InvalidateToken(context.Background(), logoutRequest.Email)
 	if err != nil {
-		return nil, fmt.Errorf("failed to delete session from Redis: %w", err)
+		return nil, fmt.Errorf("logout failed: %w", err)
 	}
 
 	return &model.UserLogoutResponse{

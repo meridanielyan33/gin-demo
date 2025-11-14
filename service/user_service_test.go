@@ -4,8 +4,10 @@ import (
 	"context"
 	"errors"
 	"gin-demo/config"
+	"gin-demo/middleware"
 	"gin-demo/mocks"
 	"gin-demo/model"
+	"gin-demo/redis_utils"
 	services "gin-demo/service"
 	"testing"
 
@@ -18,10 +20,10 @@ import (
 )
 
 func TestRegister_Success(t *testing.T) {
+	config.InitTestConfig("testsecret")
 	mockRepo := new(mocks.UserRepository)
-	rdb, _ := redismock.NewClientMock()
-
-	svc := services.NewUserService(mockRepo, rdb)
+	jwtStrategy := middleware.NewJWTStrategy(redis_utils.GetRedisClient())
+	svc := services.NewUserService(mockRepo, *jwtStrategy)
 
 	user := &model.User{
 		Username: "john",
@@ -32,15 +34,15 @@ func TestRegister_Success(t *testing.T) {
 	mockRepo.On("CreateUser", mock.AnythingOfType("*model.User")).Return(nil)
 
 	err := svc.Register(user)
-
 	assert.NoError(t, err)
 	mockRepo.AssertExpectations(t)
 }
 
 func TestRegister_Failure(t *testing.T) {
+	config.InitTestConfig("testsecret")
 	mockRepo := new(mocks.UserRepository)
-	rdb, _ := redismock.NewClientMock()
-	svc := services.NewUserService(mockRepo, rdb)
+	jwtStrategy := middleware.NewJWTStrategy(redis_utils.GetRedisClient())
+	svc := services.NewUserService(mockRepo, *jwtStrategy)
 
 	user := &model.User{
 		Username: "john",
@@ -51,7 +53,6 @@ func TestRegister_Failure(t *testing.T) {
 	mockRepo.On("CreateUser", mock.AnythingOfType("*model.User")).Return(errors.New("failed to create user"))
 
 	err := svc.Register(user)
-
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to create user")
 	mockRepo.AssertExpectations(t)
@@ -61,14 +62,13 @@ func TestLogin_Success(t *testing.T) {
 	config.InitTestConfig("testsecret")
 
 	mockRepo := new(mocks.UserRepository)
-
 	rdb := redis.NewClient(&redis.Options{
 		Addr: "localhost:6379",
 		DB:   1,
 	})
 	defer rdb.FlushDB(context.Background())
-
-	svc := services.NewUserService(mockRepo, rdb)
+	jwtStrategy := middleware.NewJWTStrategy(rdb)
+	svc := services.NewUserService(mockRepo, *jwtStrategy)
 
 	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte("secret"), bcrypt.DefaultCost)
 
@@ -94,10 +94,12 @@ func TestLogin_WrongPassword(t *testing.T) {
 
 	mockRepo := new(mocks.UserRepository)
 	rdb, _ := redismock.NewClientMock()
-	svc := services.NewUserService(mockRepo, rdb)
+	jwtStrategy := middleware.NewJWTStrategy(rdb)
+	svc := services.NewUserService(mockRepo, *jwtStrategy)
 
+	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte("secret"), bcrypt.DefaultCost)
 	mockRepo.On("FindByEmail", "john@example.com").
-		Return(&model.User{Email: "john@example.com", Password: "hashedpass"}, nil)
+		Return(&model.User{Email: "john@example.com", Password: string(hashedPassword)}, nil)
 
 	req := &model.UserLoginRequest{
 		Email:    "john@example.com",
@@ -114,9 +116,11 @@ func TestLogin_WrongPassword(t *testing.T) {
 }
 
 func TestLogin_RepoError(t *testing.T) {
+	config.InitTestConfig("testsecret")
 	mockRepo := new(mocks.UserRepository)
 	rdb, _ := redismock.NewClientMock()
-	svc := services.NewUserService(mockRepo, rdb)
+	jwtStrategy := middleware.NewJWTStrategy(rdb)
+	svc := services.NewUserService(mockRepo, *jwtStrategy)
 
 	mockRepo.On("FindByEmail", "unknown@example.com").
 		Return(nil, errors.New("not found"))
@@ -130,9 +134,11 @@ func TestLogin_RepoError(t *testing.T) {
 }
 
 func TestLogout_Success(t *testing.T) {
+	config.InitTestConfig("testsecret")
 	mockRepo := new(mocks.UserRepository)
 	rdb, mockRedis := redismock.NewClientMock()
-	svc := services.NewUserService(mockRepo, rdb)
+	jwtStrategy := middleware.NewJWTStrategy(rdb)
+	svc := services.NewUserService(mockRepo, *jwtStrategy)
 
 	user := &model.User{
 		Username: "john",
@@ -150,10 +156,12 @@ func TestLogout_Success(t *testing.T) {
 	assert.NoError(t, mockRedis.ExpectationsWereMet())
 }
 
-func TestLogout_RedisError(t *testing.T) {
+func TestLogout_StrategyError(t *testing.T) {
+	config.InitTestConfig("testsecret")
 	mockRepo := new(mocks.UserRepository)
 	rdb, mockRedis := redismock.NewClientMock()
-	svc := services.NewUserService(mockRepo, rdb)
+	jwtStrategy := middleware.NewJWTStrategy(rdb)
+	svc := services.NewUserService(mockRepo, *jwtStrategy)
 
 	user := &model.User{Username: "john", Email: "john@example.com"}
 
@@ -171,9 +179,12 @@ func TestLogout_RedisError(t *testing.T) {
 }
 
 func TestLogout_UserNotFound(t *testing.T) {
+	config.InitTestConfig("testsecret")
+
 	mockRepo := new(mocks.UserRepository)
 	rdb, _ := redismock.NewClientMock()
-	svc := services.NewUserService(mockRepo, rdb)
+	jwtStrategy := middleware.NewJWTStrategy(rdb)
+	svc := services.NewUserService(mockRepo, *jwtStrategy)
 
 	mockRepo.On("FindByEmail", "missing@example.com").
 		Return(nil, errors.New("not found"))
@@ -187,9 +198,12 @@ func TestLogout_UserNotFound(t *testing.T) {
 }
 
 func TestGetUsers(t *testing.T) {
+	config.InitTestConfig("testsecret")
+
 	mockRepo := new(mocks.UserRepository)
 	rdb, _ := redismock.NewClientMock()
-	svc := services.NewUserService(mockRepo, rdb)
+	jwtStrategy := middleware.NewJWTStrategy(rdb)
+	svc := services.NewUserService(mockRepo, *jwtStrategy)
 
 	expectedUsers := []model.UserData{
 		{Username: "john", Email: "john@example.com"},
@@ -206,10 +220,11 @@ func TestGetUsers(t *testing.T) {
 }
 
 func TestGetUsers_Failure(t *testing.T) {
+	config.InitTestConfig("testsecret")
 	mockRepo := new(mocks.UserRepository)
 	rdb, _ := redismock.NewClientMock()
-	svc := services.NewUserService(mockRepo, rdb)
-
+	jwtStrategy := middleware.NewJWTStrategy(rdb)
+	svc := services.NewUserService(mockRepo, *jwtStrategy)
 	mockRepo.On("FindAll", "admin@example.com").Return(nil)
 
 	users := svc.GetUsers("admin@example.com")
@@ -219,10 +234,11 @@ func TestGetUsers_Failure(t *testing.T) {
 }
 
 func TestGetUserById(t *testing.T) {
+	config.InitTestConfig("testsecret")
 	mockRepo := new(mocks.UserRepository)
 	rdb, _ := redismock.NewClientMock()
-	svc := services.NewUserService(mockRepo, rdb)
-
+	jwtStrategy := middleware.NewJWTStrategy(rdb)
+	svc := services.NewUserService(mockRepo, *jwtStrategy)
 	expectedUser := &model.UserData{Username: "john", Email: "john@example.com"}
 	mockRepo.On("FindById", "123").Return(expectedUser, nil)
 
@@ -235,9 +251,11 @@ func TestGetUserById(t *testing.T) {
 }
 
 func TestGetUserById_LettersNotAllowed(t *testing.T) {
+	config.InitTestConfig("testsecret")
 	mockRepo := new(mocks.UserRepository)
 	rdb, _ := redismock.NewClientMock()
-	svc := services.NewUserService(mockRepo, rdb)
+	jwtStrategy := middleware.NewJWTStrategy(rdb)
+	svc := services.NewUserService(mockRepo, *jwtStrategy)
 	mockRepo.On("FindById", "abc").Return(nil, errors.New("Invalid ID format"))
 	user, err := svc.GetUserById("abc")
 	require.Error(t, err)
@@ -245,10 +263,13 @@ func TestGetUserById_LettersNotAllowed(t *testing.T) {
 	mockRepo.AssertExpectations(t)
 
 }
+
 func TestGetUserById_NotFound(t *testing.T) {
+	config.InitTestConfig("testsecret")
 	mockRepo := new(mocks.UserRepository)
 	rdb, _ := redismock.NewClientMock()
-	svc := services.NewUserService(mockRepo, rdb)
+	jwtStrategy := middleware.NewJWTStrategy(rdb)
+	svc := services.NewUserService(mockRepo, *jwtStrategy)
 
 	mockRepo.On("FindById", "999").
 		Return(nil, errors.New("user not found"))
@@ -263,9 +284,11 @@ func TestGetUserById_NotFound(t *testing.T) {
 }
 
 func TestGetUserByEmail(t *testing.T) {
+	config.InitTestConfig("testsecret")
 	mockRepo := new(mocks.UserRepository)
 	rdb, _ := redismock.NewClientMock()
-	svc := services.NewUserService(mockRepo, rdb)
+	jwtStrategy := middleware.NewJWTStrategy(rdb)
+	svc := services.NewUserService(mockRepo, *jwtStrategy)
 
 	expectedUser := &model.User{
 		Username:  "john",
@@ -286,9 +309,12 @@ func TestGetUserByEmail(t *testing.T) {
 }
 
 func TestGetUserByEmail_NotFound(t *testing.T) {
+	config.InitTestConfig("testsecret")
+
 	mockRepo := new(mocks.UserRepository)
 	rdb, _ := redismock.NewClientMock()
-	svc := services.NewUserService(mockRepo, rdb)
+	jwtStrategy := middleware.NewJWTStrategy(rdb)
+	svc := services.NewUserService(mockRepo, *jwtStrategy)
 
 	mockRepo.On("FindByEmail", "missing@example.com").
 		Return(nil, errors.New("user not found"))

@@ -17,10 +17,22 @@ type Claims struct {
 	jwt.RegisteredClaims
 }
 
-func GenerateAccessToken(email string) (string, error) {
-	cfg := config.GetConfig()
+type JWTStrategy struct {
+	redis  *redis.Client
+	secret string
+	ttl    time.Duration
+}
 
-	secretKey := cfg.Secret
+func NewJWTStrategy(redisClient *redis.Client) *JWTStrategy {
+	cfg := config.GetConfig()
+	return &JWTStrategy{
+		redis:  redisClient,
+		secret: cfg.Secret,
+		ttl:    8 * time.Hour,
+	}
+}
+
+func (s *JWTStrategy) GenerateAccessToken(ctx context.Context, email string) (string, error) {
 	expirationTime := time.Now().Add(8 * time.Hour)
 	sessionID := uuid.New().String()
 
@@ -32,15 +44,20 @@ func GenerateAccessToken(email string) (string, error) {
 		},
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString([]byte(secretKey))
+	signed, err := token.SignedString([]byte(s.secret))
+	if err != nil {
+		return "", err
+	}
+
+	if err := s.redis.Set(ctx, email, signed, s.ttl).Err(); err != nil {
+		return "", err
+	}
+	return signed, nil
 }
 
-func ValidateAccessToken(tokenString string, redisClient *redis.Client) (*Claims, error) {
-	cfg := config.GetConfig()
-
-	secretKey := cfg.Secret
+func (s *JWTStrategy) ValidateAccessToken(ctx context.Context, tokenString string) (*TokenData, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
-		return []byte(secretKey), nil
+		return []byte(s.secret), nil
 	}, jwt.WithoutClaimsValidation())
 	if err != nil && !errors.Is(err, jwt.ErrTokenExpired) {
 		return nil, errors.New("invalid token")
@@ -51,9 +68,7 @@ func ValidateAccessToken(tokenString string, redisClient *redis.Client) (*Claims
 		return nil, errors.New("invalid token claims")
 	}
 
-	ctx := context.Background()
-	redisKey := claims.Email
-	storedToken, err := redisClient.Get(ctx, redisKey).Result()
+	storedToken, err := s.redis.Get(ctx, claims.Email).Result()
 	if errors.Is(err, redis.Nil) {
 		return nil, errors.New("token not found in Redis")
 	} else if err != nil {
@@ -68,5 +83,12 @@ func ValidateAccessToken(tokenString string, redisClient *redis.Client) (*Claims
 		return nil, errors.New("token expired")
 	}
 
-	return claims, nil
+	return &TokenData{
+		Email:     claims.Email,
+		SessionID: claims.SessionID,
+	}, nil
+}
+
+func (s *JWTStrategy) InvalidateToken(ctx context.Context, email string) error {
+	return s.redis.Del(ctx, email).Err()
 }

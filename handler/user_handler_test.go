@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 	"gin-demo/handler"
-	"gin-demo/middleware"
 	"gin-demo/mocks"
 	"gin-demo/model"
+	services "gin-demo/service"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -30,7 +30,8 @@ func setupRouter(handler *handler.Handler) *gin.Engine {
 
 func TestLogin_Success(t *testing.T) {
 	mockService := new(mocks.UserService)
-	handler := handler.NewHandler(mockService)
+	userServiceFacade := services.NewUserServiceFacade(mockService)
+	handler := handler.NewHandler(*userServiceFacade)
 
 	reqBody := model.UserLoginRequest{
 		Email:    "test@example.com",
@@ -55,8 +56,8 @@ func TestLogin_Success(t *testing.T) {
 
 func TestLogin_InvalidRequest(t *testing.T) {
 	mockService := new(mocks.UserService)
-	handler := handler.NewHandler(mockService)
-
+	userServiceFacade := services.NewUserServiceFacade(mockService)
+	handler := handler.NewHandler(*userServiceFacade)
 	req, _ := http.NewRequest(http.MethodPost, "/api/login", bytes.NewBufferString("{invalid-json}"))
 	req.Header.Set("Content-Type", "application/json")
 
@@ -69,8 +70,8 @@ func TestLogin_InvalidRequest(t *testing.T) {
 
 func TestLogin_ServiceError(t *testing.T) {
 	mockService := new(mocks.UserService)
-	handler := handler.NewHandler(mockService)
-
+	userServiceFacade := services.NewUserServiceFacade(mockService)
+	handler := handler.NewHandler(*userServiceFacade)
 	reqBody := model.UserLoginRequest{
 		Email:    "fail@example.com",
 		Password: "wrong",
@@ -91,13 +92,13 @@ func TestLogin_ServiceError(t *testing.T) {
 
 func TestLogout_Success(t *testing.T) {
 	mockService := new(mocks.UserService)
-	handler := handler.NewHandler(mockService)
-
+	userServiceFacade := services.NewUserServiceFacade(mockService)
+	handler := handler.NewHandler(*userServiceFacade)
 	gin.SetMode(gin.TestMode)
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
 
-	c.Set("claims", &middleware.Claims{Email: "test@example.com"})
+	c.Set("email", "test@example.com")
 
 	mockService.On("Logout", &model.UserLogoutRequest{Email: "test@example.com"}).
 		Return(&model.UserLogoutResponse{Message: "Logout success"}, nil)
@@ -110,12 +111,12 @@ func TestLogout_Success(t *testing.T) {
 
 func TestLogout_Error(t *testing.T) {
 	mockService := new(mocks.UserService)
-	handler := handler.NewHandler(mockService)
-
+	userServiceFacade := services.NewUserServiceFacade(mockService)
+	handler := handler.NewHandler(*userServiceFacade)
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
 
-	c.Set("claims", &middleware.Claims{Email: "test@example.com"})
+	c.Set("email", "test@example.com")
 	mockService.On("Logout", &model.UserLogoutRequest{Email: "test@example.com"}).
 		Return(nil, errors.New("logout failed"))
 
@@ -125,8 +126,8 @@ func TestLogout_Error(t *testing.T) {
 
 func TestRegister_Success(t *testing.T) {
 	mockService := new(mocks.UserService)
-	handler := handler.NewHandler(mockService)
-
+	userServiceFacade := services.NewUserServiceFacade(mockService)
+	handler := handler.NewHandler(*userServiceFacade)
 	user := model.User{
 		Email:    "new@example.com",
 		Password: "password",
@@ -147,8 +148,8 @@ func TestRegister_Success(t *testing.T) {
 
 func TestRegister_Error(t *testing.T) {
 	mockService := new(mocks.UserService)
-	handler := handler.NewHandler(mockService)
-
+	userServiceFacade := services.NewUserServiceFacade(mockService)
+	handler := handler.NewHandler(*userServiceFacade)
 	user := model.User{Email: "bad@example.com"}
 	mockService.On("Register", &user).Return(errors.New("email exists"))
 
@@ -165,15 +166,15 @@ func TestRegister_Error(t *testing.T) {
 
 func TestGetUsers_Success(t *testing.T) {
 	mockService := new(mocks.UserService)
-	handler := handler.NewHandler(mockService)
-
+	userServiceFacade := services.NewUserServiceFacade(mockService)
+	handler := handler.NewHandler(*userServiceFacade)
 	users := []model.UserData{{Email: "a@example.com"}, {Email: "b@example.com"}}
 	mockService.On("GetUsers", "test@example.com").Return(users)
 
 	gin.SetMode(gin.TestMode)
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
-	c.Set("claims", &middleware.Claims{Email: "test@example.com"})
+	c.Set("email", "test@example.com")
 
 	handler.GetUsers(c)
 
@@ -183,14 +184,14 @@ func TestGetUsers_Success(t *testing.T) {
 
 func TestGetAuthenticatedUser_Success(t *testing.T) {
 	mockService := new(mocks.UserService)
-	handler := handler.NewHandler(mockService)
-
+	userServiceFacade := services.NewUserServiceFacade(mockService)
+	handler := handler.NewHandler(*userServiceFacade)
 	user := &model.UserData{Email: "me@example.com"}
 	mockService.On("GetUserByEmail", "me@example.com").Return(user, nil)
 
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
-	c.Set("claims", &middleware.Claims{Email: "me@example.com"})
+	c.Set("email", "me@example.com")
 
 	handler.GetAuthenticatedUser(c)
 	assert.Equal(t, http.StatusOK, w.Code)
@@ -199,8 +200,8 @@ func TestGetAuthenticatedUser_Success(t *testing.T) {
 
 func TestGetUserById_Success(t *testing.T) {
 	mockService := new(mocks.UserService)
-	handler := handler.NewHandler(mockService)
-
+	userServiceFacade := services.NewUserServiceFacade(mockService)
+	handler := handler.NewHandler(*userServiceFacade)
 	user := &model.UserData{
 		Username:  "tester",
 		Email:     "test@example.com",
@@ -219,8 +220,8 @@ func TestGetUserById_Success(t *testing.T) {
 
 func TestGetUserById_InvalidID(t *testing.T) {
 	mockService := new(mocks.UserService)
-	handler := handler.NewHandler(mockService)
-
+	userServiceFacade := services.NewUserServiceFacade(mockService)
+	handler := handler.NewHandler(*userServiceFacade)
 	req, _ := http.NewRequest(http.MethodGet, "/api/user/abc", nil)
 	w := httptest.NewRecorder()
 	r := setupRouter(handler)
@@ -231,8 +232,8 @@ func TestGetUserById_InvalidID(t *testing.T) {
 
 func TestGetUserById_NotFound(t *testing.T) {
 	mockService := new(mocks.UserService)
-	handler := handler.NewHandler(mockService)
-
+	userServiceFacade := services.NewUserServiceFacade(mockService)
+	handler := handler.NewHandler(*userServiceFacade)
 	mockService.On("GetUserById", "99").Return(nil, errors.New("user not found"))
 
 	req, _ := http.NewRequest(http.MethodGet, "/api/user/99", nil)
