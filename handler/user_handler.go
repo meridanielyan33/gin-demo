@@ -58,11 +58,7 @@ func (h *Handler) Logout(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.UserNotAuthenticated})
 		return
 	}
-	email, ok := emailVal.(string)
-	if !ok || email == "" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.AuthHeaderMissing})
-		return
-	}
+	email, _ := emailVal.(string)
 
 	logoutReq := &model.UserLogoutRequest{Email: email}
 	logoutRes, er := h.userServiceFacade.Logout(c, logoutReq)
@@ -134,15 +130,5 @@ func (h *Handler) GetUserById(c *gin.Context) {
 		return
 	}
 
-	userData := model.UserData{
-		Username:  user.Username,
-		Email:     user.Email,
-		FirstName: user.FirstName,
-		LastName:  user.LastName,
-		Age:       user.Age,
-		CreatedAt: user.CreatedAt,
-		UpdatedAt: user.UpdatedAt,
-	}
-
-	c.JSON(http.StatusOK, gin.H{"user": userData})
+	c.JSON(http.StatusOK, gin.H{"user": user})
 }

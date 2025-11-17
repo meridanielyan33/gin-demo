@@ -11,10 +11,10 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
 func setupRouter(handler *handler.Handler) *gin.Engine {
@@ -132,7 +132,9 @@ func TestRegister_Success(t *testing.T) {
 		Email:    "new@example.com",
 		Password: "password",
 	}
-	mockService.On("Register", &user).Return(nil)
+	mockService.On("Register", mock.MatchedBy(func(u *model.User) bool {
+		return u != nil && u.Email == "new@example.com"
+	})).Return(nil)
 
 	body, _ := json.Marshal(user)
 	req, _ := http.NewRequest(http.MethodPost, "/api/users", bytes.NewBuffer(body))
@@ -168,7 +170,7 @@ func TestGetUsers_Success(t *testing.T) {
 	mockService := new(mocks.UserService)
 	userServiceFacade := services.NewUserServiceFacade(mockService)
 	handler := handler.NewHandler(*userServiceFacade)
-	users := []model.UserData{{Email: "a@example.com"}, {Email: "b@example.com"}}
+	users := []model.User{{Email: "a@example.com"}, {Email: "b@example.com"}}
 	mockService.On("GetUsers", "test@example.com").Return(users)
 
 	gin.SetMode(gin.TestMode)
@@ -186,7 +188,7 @@ func TestGetAuthenticatedUser_Success(t *testing.T) {
 	mockService := new(mocks.UserService)
 	userServiceFacade := services.NewUserServiceFacade(mockService)
 	handler := handler.NewHandler(*userServiceFacade)
-	user := &model.UserData{Email: "me@example.com"}
+	user := &model.User{Email: "me@example.com"}
 	mockService.On("GetUserByEmail", "me@example.com").Return(user, nil)
 
 	w := httptest.NewRecorder()
@@ -202,10 +204,9 @@ func TestGetUserById_Success(t *testing.T) {
 	mockService := new(mocks.UserService)
 	userServiceFacade := services.NewUserServiceFacade(mockService)
 	handler := handler.NewHandler(*userServiceFacade)
-	user := &model.UserData{
-		Username:  "tester",
-		Email:     "test@example.com",
-		CreatedAt: time.Now(),
+	user := &model.User{
+		Username: "tester",
+		Email:    "test@example.com",
 	}
 	mockService.On("GetUserById", "1").Return(user, nil)
 

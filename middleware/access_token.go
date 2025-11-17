@@ -32,10 +32,10 @@ func NewJWTStrategy(redisClient *redis.Client) *JWTStrategy {
 	}
 }
 
-func (s *JWTStrategy) GenerateAccessToken(ctx context.Context, email string) (string, error) {
+func (s *JWTStrategy) GenerateAccessToken(email string) (string, error) {
 	expirationTime := time.Now().Add(8 * time.Hour)
 	sessionID := uuid.New().String()
-
+	ctx := context.Background()
 	claims := &Claims{
 		Email:     email,
 		SessionID: sessionID,
@@ -55,7 +55,8 @@ func (s *JWTStrategy) GenerateAccessToken(ctx context.Context, email string) (st
 	return signed, nil
 }
 
-func (s *JWTStrategy) ValidateAccessToken(ctx context.Context, tokenString string) (*TokenData, error) {
+func (s *JWTStrategy) ValidateAccessToken(tokenString string) (*TokenData, error) {
+	ctx := context.Background()
 	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
 		return []byte(s.secret), nil
 	}, jwt.WithoutClaimsValidation())
@@ -89,6 +90,7 @@ func (s *JWTStrategy) ValidateAccessToken(ctx context.Context, tokenString strin
 	}, nil
 }
 
-func (s *JWTStrategy) InvalidateToken(ctx context.Context, email string) error {
+func (s *JWTStrategy) InvalidateToken(email string) error {
+	ctx := context.Background()
 	return s.redis.Del(ctx, email).Err()
 }

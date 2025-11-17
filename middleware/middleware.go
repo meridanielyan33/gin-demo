@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"context"
 	errMessage "gin-demo/errors"
 	"net/http"
 	"strings"
@@ -28,7 +27,7 @@ func AuthMiddleware(strategy JWTStrategy) gin.HandlerFunc {
 			return
 		}
 
-		claims, err := strategy.ValidateAccessToken(context.Background(), tokenString)
+		claims, err := strategy.ValidateAccessToken(tokenString)
 		if err != nil {
 			if err.Error() == "token not found in Redis" {
 				c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": errMessage.LoggedOut})

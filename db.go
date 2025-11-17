@@ -5,59 +5,43 @@ import (
 	"gin-demo/config"
 	"gin-demo/model"
 	"log"
-	"sync"
 
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
 
-var (
-	instance *gorm.DB
-	once     sync.Once
-	initErr  error
-)
+var instance *gorm.DB
 
 // Used creational pattern - singleton in the database creation
-func GetDB(config *config.Config) (*gorm.DB, error) {
-	once.Do(func() {
-		host := config.Database.Host
-		port := config.Database.Port
-		user := config.Database.User
-		dbname := config.Database.Name
-		if host == "" || port == "" || user == "" || dbname == "" {
-			log.Fatalf("Missing required database configuration in config.json")
-			initErr = fmt.Errorf("Missing required database configuration in config.json")
-			return
-		}
+func NewDatabase(cfg *config.Config) error {
+	if instance != nil {
+		return nil
+	}
 
-		dsn := fmt.Sprintf("%s@tcp(%s:%s)/%s?parseTime=true",
-			user, host, port, dbname)
+	host := cfg.Database.Host
+	port := cfg.Database.Port
+	user := cfg.Database.User
+	dbname := cfg.Database.Name
 
-		db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
-		if err != nil {
-			log.Printf("Error opening database: %v", err)
-			initErr = err
-			return
-		}
+	dsn := fmt.Sprintf("%s@tcp(%s:%s)/%s?parseTime=true",
+		user, host, port, dbname)
 
-		sqlDB, err := db.DB()
-		if err != nil {
-			log.Printf("Error getting raw SQL DB instance: %v", err)
-			initErr = err
-			return
-		}
-		if err := sqlDB.Ping(); err != nil {
-			log.Printf("Error pinging database: %v", err)
-			initErr = err
-			return
-		}
+	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
+	if err != nil {
+		return err
+	}
 
-		if err := db.AutoMigrate(&model.User{}); err != nil {
-			log.Printf("Error auto-migrating database: %v", err)
-			initErr = err
-			return
-		}
-		instance = db
-	})
-	return instance, initErr
+	if err := db.AutoMigrate(&model.User{}); err != nil {
+		return err
+	}
+
+	instance = db
+	return nil
+}
+
+func GetDB() *gorm.DB {
+	if instance == nil {
+		log.Fatalf("GetDB() called before InitDB()")
+	}
+	return instance
 }

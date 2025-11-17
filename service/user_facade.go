@@ -31,14 +31,14 @@ func (f *UserServiceFacade) Logout(ctx context.Context, req *model.UserLogoutReq
 	return f.userService.Logout(req)
 }
 
-func (f *UserServiceFacade) GetUsers(email string) []model.UserData {
+func (f *UserServiceFacade) GetUsers(email string) []model.User {
 	return f.userService.GetUsers(email)
 }
 
-func (f *UserServiceFacade) GetUserById(id string) (*model.UserData, error) {
+func (f *UserServiceFacade) GetUserById(id string) (*model.User, error) {
 	return f.userService.GetUserById(id)
 }
 
-func (f *UserServiceFacade) GetUserByEmail(email string) (*model.UserData, error) {
+func (f *UserServiceFacade) GetUserByEmail(email string) (*model.User, error) {
 	return f.userService.GetUserByEmail(email)
 }

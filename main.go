@@ -17,12 +17,11 @@ func main() {
 	if err := config.LoadConfig(*configFile); err != nil {
 		log.Fatalf("Error loading config: %v", err)
 	}
-
-	db, err := GetDB(config.GetConfig())
+	err := NewDatabase(config.GetConfig())
 	if err != nil {
 		log.Fatalf("could not initialize database connection: %s", err)
 	}
-
+	db := GetDB()
 	redis_utils.InitRedis(env)
 	router := routes.SetupRouter(db)
 

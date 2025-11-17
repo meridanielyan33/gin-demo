@@ -1,7 +1,6 @@
 package services
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"gin-demo/middleware"
@@ -16,9 +15,9 @@ type UserService interface {
 	Register(user *model.User) error
 	Login(loginRequest *model.UserLoginRequest) (*model.UserLoginResponse, error)
 	Logout(logoutRequest *model.UserLogoutRequest) (*model.UserLogoutResponse, error)
-	GetUsers(email string) []model.UserData
-	GetUserById(id string) (*model.UserData, error)
-	GetUserByEmail(email string) (*model.UserData, error)
+	GetUsers(email string) []model.User
+	GetUserById(id string) (*model.User, error)
+	GetUserByEmail(email string) (*model.User, error)
 }
 
 type UserData struct {
@@ -59,7 +58,7 @@ func (s *userService) Login(loginRequest *model.UserLoginRequest) (*model.UserLo
 		return nil, errors.New("invalid credentials")
 	}
 
-	accessToken, err := s.tokenStrategy.GenerateAccessToken(context.Background(), loginRequest.Email)
+	accessToken, err := s.tokenStrategy.GenerateAccessToken(loginRequest.Email)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate access token: %w", err)
 	}
@@ -80,7 +79,7 @@ func (s *userService) Logout(logoutRequest *model.UserLogoutRequest) (*model.Use
 		return nil, fmt.Errorf("user %s not found", logoutRequest.Email)
 	}
 
-	err = s.tokenStrategy.InvalidateToken(context.Background(), logoutRequest.Email)
+	err = s.tokenStrategy.InvalidateToken(logoutRequest.Email)
 	if err != nil {
 		return nil, fmt.Errorf("logout failed: %w", err)
 	}
@@ -90,25 +89,18 @@ func (s *userService) Logout(logoutRequest *model.UserLogoutRequest) (*model.Use
 	}, nil
 }
 
-func (s *userService) GetUsers(email string) []model.UserData {
+func (s *userService) GetUsers(email string) []model.User {
 	return s.repo.FindAll(email)
 }
 
-func (s *userService) GetUserById(id string) (*model.UserData, error) {
+func (s *userService) GetUserById(id string) (*model.User, error) {
 	return s.repo.FindById(id)
 }
 
-func (s *userService) GetUserByEmail(email string) (*model.UserData, error) {
+func (s *userService) GetUserByEmail(email string) (*model.User, error) {
 	user, err := s.repo.FindByEmail(email)
 	if err != nil {
 		return nil, fmt.Errorf("failed to find user: %w", err)
 	}
-	userData := &model.UserData{
-		Username:  user.Username,
-		Email:     user.Email,
-		CreatedAt: user.CreatedAt,
-		FirstName: user.FirstName,
-		LastName:  user.LastName,
-	}
-	return userData, nil
+	return user, nil
 }

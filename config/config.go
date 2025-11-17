@@ -6,6 +6,8 @@ import (
 	"os"
 )
 
+var Env string = "development"
+
 type DBConfig struct {
 	Host     string `json:"host"`
 	Port     string `json:"port"`

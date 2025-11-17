@@ -205,7 +205,7 @@ func TestGetUsers(t *testing.T) {
 	jwtStrategy := middleware.NewJWTStrategy(rdb)
 	svc := services.NewUserService(mockRepo, *jwtStrategy)
 
-	expectedUsers := []model.UserData{
+	expectedUsers := []model.User{
 		{Username: "john", Email: "john@example.com"},
 		{Username: "jane", Email: "jane@example.com"},
 	}
@@ -239,7 +239,7 @@ func TestGetUserById(t *testing.T) {
 	rdb, _ := redismock.NewClientMock()
 	jwtStrategy := middleware.NewJWTStrategy(rdb)
 	svc := services.NewUserService(mockRepo, *jwtStrategy)
-	expectedUser := &model.UserData{Username: "john", Email: "john@example.com"}
+	expectedUser := &model.User{Username: "john", Email: "john@example.com"}
 	mockRepo.On("FindById", "123").Return(expectedUser, nil)
 
 	user, err := svc.GetUserById("123")

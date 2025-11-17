@@ -10,8 +10,8 @@ import (
 type UserRepository interface {
 	CreateUser(user *model.User) error
 	FindByEmail(email string) (*model.User, error)
-	FindById(id string) (*model.UserData, error)
-	FindAll(email string) []model.UserData
+	FindById(id string) (*model.User, error)
+	FindAll(email string) []model.User
 }
 
 type userRepo struct {
@@ -45,22 +45,13 @@ func (r *userRepo) FindByEmail(email string) (*model.User, error) {
 	return &user, err
 }
 
-func (r *userRepo) FindById(id string) (*model.UserData, error) {
+func (r *userRepo) FindById(id string) (*model.User, error) {
 	var user model.User
 	err := r.db.Where("id = ?", id).First(&user).Error
-	userData := model.UserData{
-		Username:  user.Username,
-		Email:     user.Email,
-		FirstName: user.FirstName,
-		LastName:  user.LastName,
-		Age:       user.Age,
-		CreatedAt: user.CreatedAt,
-		UpdatedAt: user.UpdatedAt,
-	}
-	return &userData, err
+	return &user, err
 }
 
-func (r *userRepo) FindAll(email string) []model.UserData {
+func (r *userRepo) FindAll(email string) []model.User {
 	var users []model.User
 	if err := r.db.Model(&model.User{}).
 		Select("*").
@@ -69,19 +60,5 @@ func (r *userRepo) FindAll(email string) []model.UserData {
 		return nil
 	}
 
-	userDataList := make([]model.UserData, 0, len(users))
-	for _, u := range users {
-		userData := model.UserData{
-			Username:  u.Username,
-			Email:     u.Email,
-			FirstName: u.FirstName,
-			LastName:  u.LastName,
-			Age:       u.Age,
-			CreatedAt: u.CreatedAt,
-			UpdatedAt: u.UpdatedAt,
-		}
-		userDataList = append(userDataList, userData)
-	}
-
-	return userDataList
+	return users
 }
