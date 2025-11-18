@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
 )
 
 type Handler struct {
@@ -73,16 +74,27 @@ func (h *Handler) Logout(c *gin.Context) {
 }
 
 func (h *Handler) Register(c *gin.Context) {
-	var req model.User
-	if er := c.ShouldBindJSON(&req); er != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": er.Error()})
+	var body map[string]interface{}
+	if err := c.ShouldBindBodyWith(&body, binding.JSON); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	if er := h.userServiceFacade.Register(&req); er != nil {
-		c.JSON(http.StatusForbidden, gin.H{"error": er.Error()})
+	var req model.User
+	if err := c.ShouldBindBodyWith(&req, binding.JSON); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+
+	if pwd, ok := body["password"].(string); ok {
+		req.Password = pwd
+	}
+
+	if err := h.userServiceFacade.Register(&req); err != nil {
+		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+		return
+	}
+
 	c.JSON(http.StatusOK, gin.H{"message": "Registered successfully"})
 }
 
