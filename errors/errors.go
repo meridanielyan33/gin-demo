@@ -9,4 +9,9 @@ const (
 	TokenDeleteFailRedis = "Failed to delete token from Redis"
 	InvalidReqData       = "Invalid request data"
 	UserNotAuthenticated = "User not authenticated"
+	TimeFormatWrong      = "birthDate must be yyyy-mm-dd"
+	InvalidID            = "Provided ID is invalid"
+	NoFieldsToUpdate     = "No fields to update"
+	InvalidActorID       = "Invalid actor ID"
+	InvalidDirectorID    = "Invalid director ID"
 )

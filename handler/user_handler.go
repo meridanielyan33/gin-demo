@@ -4,13 +4,14 @@ import (
 	err "gin-demo/errors"
 	"gin-demo/model"
 	"gin-demo/redis_utils"
-	services "gin-demo/service"
+	"gin-demo/services"
+
 	"net/http"
-	"regexp"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type Handler struct {
@@ -29,7 +30,7 @@ func (h *Handler) Login(c *gin.Context) {
 		return
 	}
 
-	res, er := h.userServiceFacade.Login(c, &req)
+	res, er := h.userServiceFacade.Login(&req)
 	if er != nil {
 		c.JSON(http.StatusForbidden, gin.H{"error": er.Error()})
 		return
@@ -62,7 +63,7 @@ func (h *Handler) Logout(c *gin.Context) {
 	email, _ := emailVal.(string)
 
 	logoutReq := &model.UserLogoutRequest{Email: email}
-	logoutRes, er := h.userServiceFacade.Logout(c, logoutReq)
+	logoutRes, er := h.userServiceFacade.Logout(logoutReq)
 	if er != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": er.Error()})
 		return
@@ -130,13 +131,13 @@ func (h *Handler) GetAuthenticatedUser(c *gin.Context) {
 }
 
 func (h *Handler) GetUserById(c *gin.Context) {
-	idParam := c.Param("id")
-	if matched := regexp.MustCompile(`^\d+$`).MatchString(idParam); !matched {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format — only digits are allowed"})
+	idHex := c.Param("id")
+	id, err := primitive.ObjectIDFromHex(idHex)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
 		return
 	}
-
-	user, er := h.userServiceFacade.GetUserById(idParam)
+	user, er := h.userServiceFacade.GetUserById(id)
 	if er != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 		return

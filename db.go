@@ -1,16 +1,17 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"gin-demo/config"
-	"gin-demo/model"
 	"log"
+	"time"
 
-	"gorm.io/driver/mysql"
-	"gorm.io/gorm"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-var instance *gorm.DB
+var instance *mongo.Client
 
 // Used creational pattern - singleton in the database creation
 func NewDatabase(cfg *config.Config) error {
@@ -18,30 +19,33 @@ func NewDatabase(cfg *config.Config) error {
 		return nil
 	}
 
-	host := cfg.Database.Host
-	port := cfg.Database.Port
-	user := cfg.Database.User
-	dbname := cfg.Database.Name
+	uri := fmt.Sprintf("mongodb://%s:%s", cfg.Database.Host, cfg.Database.Port)
 
-	dsn := fmt.Sprintf("%s@tcp(%s:%s)/%s?parseTime=true",
-		user, host, port, dbname)
+	clientOptions := options.Client().ApplyURI(uri)
 
-	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	client, err := mongo.Connect(ctx, clientOptions)
 	if err != nil {
 		return err
 	}
 
-	if err := db.AutoMigrate(&model.User{}); err != nil {
+	if err := client.Ping(ctx, nil); err != nil {
 		return err
 	}
 
-	instance = db
+	instance = client
 	return nil
 }
 
-func GetDB() *gorm.DB {
+func GetDB() *mongo.Client {
 	if instance == nil {
-		log.Fatalf("GetDB() called before InitDB()")
+		log.Fatalf("GetDB() called before NewDatabase()")
 	}
 	return instance
+}
+
+func GetDatabase(cfg *config.Config) *mongo.Database {
+	return GetDB().Database(cfg.Database.DbName)
 }

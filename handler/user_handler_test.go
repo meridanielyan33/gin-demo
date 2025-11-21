@@ -7,7 +7,7 @@ import (
 	"gin-demo/handler"
 	"gin-demo/mocks"
 	"gin-demo/model"
-	services "gin-demo/service"
+	services "gin-demo/services"
 	"net/http"
 	"net/http/httptest"
 	"testing"

@@ -8,17 +8,9 @@ import (
 	"gin-demo/repository"
 	"time"
 
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"golang.org/x/crypto/bcrypt"
 )
-
-type UserService interface {
-	Register(user *model.User) error
-	Login(loginRequest *model.UserLoginRequest) (*model.UserLoginResponse, error)
-	Logout(logoutRequest *model.UserLogoutRequest) (*model.UserLogoutResponse, error)
-	GetUsers(email string) []model.User
-	GetUserById(id string) (*model.User, error)
-	GetUserByEmail(email string) (*model.User, error)
-}
 
 type UserData struct {
 	Username  string    `json:"username"`
@@ -26,19 +18,19 @@ type UserData struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
-type userService struct {
+type UserService struct {
 	repo          repository.UserRepository
 	tokenStrategy middleware.JWTStrategy
 }
 
-func NewUserService(repo repository.UserRepository, tokenStrategy middleware.JWTStrategy) UserService {
-	return &userService{
+func NewUserService(repo repository.UserRepository, tokenStrategy middleware.JWTStrategy) *UserService {
+	return &UserService{
 		repo:          repo,
 		tokenStrategy: tokenStrategy,
 	}
 }
 
-func (s *userService) Register(user *model.User) error {
+func (s *UserService) Register(user *model.User) error {
 	hashed, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return err
@@ -47,7 +39,7 @@ func (s *userService) Register(user *model.User) error {
 	return s.repo.CreateUser(user)
 }
 
-func (s *userService) Login(loginRequest *model.UserLoginRequest) (*model.UserLoginResponse, error) {
+func (s *UserService) Login(loginRequest *model.UserLoginRequest) (*model.UserLoginResponse, error) {
 	userAuth, err := s.repo.FindByEmail(loginRequest.Email)
 	if err != nil {
 		return nil, errors.New("no such user with specified email")
@@ -70,7 +62,7 @@ func (s *userService) Login(loginRequest *model.UserLoginRequest) (*model.UserLo
 	return &response, nil
 }
 
-func (s *userService) Logout(logoutRequest *model.UserLogoutRequest) (*model.UserLogoutResponse, error) {
+func (s *UserService) Logout(logoutRequest *model.UserLogoutRequest) (*model.UserLogoutResponse, error) {
 	user, err := s.repo.FindByEmail(logoutRequest.Email)
 	if err != nil {
 		return nil, fmt.Errorf("failed to find user: %w", err)
@@ -89,15 +81,15 @@ func (s *userService) Logout(logoutRequest *model.UserLogoutRequest) (*model.Use
 	}, nil
 }
 
-func (s *userService) GetUsers(email string) []model.User {
+func (s *UserService) GetUsers(email string) []model.User {
 	return s.repo.FindAll(email)
 }
 
-func (s *userService) GetUserById(id string) (*model.User, error) {
+func (s *UserService) GetUserById(id primitive.ObjectID) (*model.User, error) {
 	return s.repo.FindById(id)
 }
 
-func (s *userService) GetUserByEmail(email string) (*model.User, error) {
+func (s *UserService) GetUserByEmail(email string) (*model.User, error) {
 	user, err := s.repo.FindByEmail(email)
 	if err != nil {
 		return nil, fmt.Errorf("failed to find user: %w", err)

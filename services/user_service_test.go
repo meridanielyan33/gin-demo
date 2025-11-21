@@ -8,7 +8,7 @@ import (
 	"gin-demo/mocks"
 	"gin-demo/model"
 	"gin-demo/redis_utils"
-	services "gin-demo/service"
+	services "gin-demo/services"
 	"testing"
 
 	"github.com/go-redis/redismock/v9"

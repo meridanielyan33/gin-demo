@@ -21,7 +21,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("could not initialize database connection: %s", err)
 	}
-	db := GetDB()
+	db := GetDatabase(config.GetConfig())
 	redis_utils.InitRedis(env)
 	router := routes.SetupRouter(db)
 

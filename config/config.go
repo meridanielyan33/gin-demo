@@ -9,11 +9,9 @@ import (
 var Env string = "development"
 
 type DBConfig struct {
-	Host     string `json:"host"`
-	Port     string `json:"port"`
-	User     string `json:"user"`
-	Password string `json:"password"`
-	Name     string `json:"name"`
+	Host   string `json:"host"`
+	Port   string `json:"port"`
+	DbName string `json:"name"`
 }
 
 type Config struct {

@@ -1,8 +1,9 @@
 package services
 
 import (
-	"context"
 	"gin-demo/model"
+
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 // Implemented facade structural design pattern
@@ -23,11 +24,11 @@ func (f *UserServiceFacade) Register(user *model.User) error {
 	return f.userService.Register(user)
 }
 
-func (f *UserServiceFacade) Login(ctx context.Context, req *model.UserLoginRequest) (*model.UserLoginResponse, error) {
+func (f *UserServiceFacade) Login(req *model.UserLoginRequest) (*model.UserLoginResponse, error) {
 	return f.userService.Login(req)
 }
 
-func (f *UserServiceFacade) Logout(ctx context.Context, req *model.UserLogoutRequest) (*model.UserLogoutResponse, error) {
+func (f *UserServiceFacade) Logout(req *model.UserLogoutRequest) (*model.UserLogoutResponse, error) {
 	return f.userService.Logout(req)
 }
 
@@ -35,7 +36,7 @@ func (f *UserServiceFacade) GetUsers(email string) []model.User {
 	return f.userService.GetUsers(email)
 }
 
-func (f *UserServiceFacade) GetUserById(id string) (*model.User, error) {
+func (f *UserServiceFacade) GetUserById(id primitive.ObjectID) (*model.User, error) {
 	return f.userService.GetUserById(id)
 }
 
