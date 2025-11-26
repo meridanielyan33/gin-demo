@@ -7,14 +7,14 @@ packages:
       dir: repository
       output: mocks
       outpkg: mocks
-      with-expecter: true
-    interfaces:
-      - name: UserRepository
-  gin-demo/service:
+      recursive: true
+      all: true
+
+  gin-demo/services:
     config:
       dir: services
       output: mocks
       outpkg: mocks
-      with-expecter: true
-    interfaces:
-      - name: UserService
+      recursive: true
+      all: true
+

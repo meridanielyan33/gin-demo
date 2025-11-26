@@ -16,13 +16,13 @@ func SetupRouter(db *mongo.Database) *gin.Engine {
 	router.SetTrustedProxies([]string{"0.0.0.0/0"})
 	jwtStrategy := middleware.NewJWTStrategy(redis_utils.GetRedisClient())
 	userRepo := repository.NewUserRepository(db)
-	userService := services.NewUserService(*userRepo, *jwtStrategy)
-	userServiceFacade := services.NewUserServiceFacade(*userService)
+	userService := services.NewUserService(userRepo, *jwtStrategy)
+	userServiceFacade := services.NewUserServiceFacade(userService)
 	userHandler := handler.NewHandler(*userServiceFacade)
 
 	actorRepo := repository.NewActorRepository(db)
 	actorService := services.NewActorService(actorRepo)
-	actorHandler := handler.NewActorHandler(*actorService)
+	actorHandler := handler.NewActorHandler(actorService)
 
 	directorRepo := repository.NewDirectorRepository(db)
 	directorService := services.NewDirectorService(directorRepo)
@@ -67,6 +67,6 @@ func SetupRouter(db *mongo.Database) *gin.Engine {
 	// api/actor-movies/692035ff46a473472ef22f5b?exclude=title,release_year
 	protected.GET("/director-movies/:directorId", movieHandler.GetMoviesByDirector)
 	protected.GET("/actor-movies/:actorId", movieHandler.GetMoviesByActor)
-	
+
 	return router
 }

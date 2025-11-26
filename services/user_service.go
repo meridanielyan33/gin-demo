@@ -18,12 +18,21 @@ type UserData struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
+type IUserService interface {
+	Register(user *model.User) error
+	Login(loginRequest *model.UserLoginRequest) (*model.UserLoginResponse, error)
+	Logout(logoutRequest *model.UserLogoutRequest) (*model.UserLogoutResponse, error)
+	GetUsers(email string) []model.User
+	GetUserById(id primitive.ObjectID) (*model.User, error)
+	GetUserByEmail(email string) (*model.User, error)
+}
+
 type UserService struct {
-	repo          repository.UserRepository
+	repo          repository.IUserRepository
 	tokenStrategy middleware.JWTStrategy
 }
 
-func NewUserService(repo repository.UserRepository, tokenStrategy middleware.JWTStrategy) *UserService {
+func NewUserService(repo repository.IUserRepository, tokenStrategy middleware.JWTStrategy) IUserService {
 	return &UserService{
 		repo:          repo,
 		tokenStrategy: tokenStrategy,

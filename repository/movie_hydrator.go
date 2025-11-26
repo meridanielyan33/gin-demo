@@ -13,11 +13,11 @@ type HydrationOptions struct {
 }
 
 type MovieHydrator struct {
-	DirectorsRepo *DirectorRepository
-	ActorsRepo    *ActorRepository
+	DirectorsRepo IDirectorRepository
+	ActorsRepo    IActorRepository
 }
 
-func NewMovieHydrator(dRepo *DirectorRepository, aRepo *ActorRepository) *MovieHydrator {
+func NewMovieHydrator(dRepo IDirectorRepository, aRepo IActorRepository) *MovieHydrator {
 	return &MovieHydrator{
 		DirectorsRepo: dRepo,
 		ActorsRepo:    aRepo,

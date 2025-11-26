@@ -8,11 +8,18 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+type IActorService interface {
+	Create(actor *model.Actor) (primitive.ObjectID, error)
+	GetByID(id primitive.ObjectID) (*model.Actor, error)
+	GetAll() ([]model.Actor, error)
+	Update(id primitive.ObjectID, update bson.M) error
+	Delete(id primitive.ObjectID) error
+}
 type ActorService struct {
-	repo *repository.ActorRepository
+	repo repository.IActorRepository
 }
 
-func NewActorService(repo *repository.ActorRepository) *ActorService {
+func NewActorService(repo repository.IActorRepository) IActorService {
 	return &ActorService{repo: repo}
 }
 

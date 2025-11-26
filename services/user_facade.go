@@ -11,10 +11,10 @@ import (
 // or our user service starts to need using more service
 // this way the code will be more cleaner and flexible
 type UserServiceFacade struct {
-	userService UserService
+	userService IUserService
 }
 
-func NewUserServiceFacade(userService UserService) *UserServiceFacade {
+func NewUserServiceFacade(userService IUserService) *UserServiceFacade {
 	return &UserServiceFacade{
 		userService: userService,
 	}

@@ -70,11 +70,18 @@ func (r *userRepo) FindAll(email string) []model.User {
 }
 */
 
+type IUserRepository interface {
+	CreateUser(user *model.User) error
+	FindByEmail(email string) (*model.User, error)
+	FindById(id primitive.ObjectID) (*model.User, error)
+	FindAll(email string) []model.User
+}
+
 type UserRepository struct {
 	collection *mongo.Collection
 }
 
-func NewUserRepository(db *mongo.Database) *UserRepository {
+func NewUserRepository(db *mongo.Database) IUserRepository {
 	return &UserRepository{
 		collection: db.Collection("users"),
 	}

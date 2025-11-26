@@ -24,3 +24,6 @@ Thumbs.db
 .env
 
 mocks/
+
+repository/mocks
+services/mocks

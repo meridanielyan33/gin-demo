@@ -13,13 +13,33 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
+type IMovieRepository interface {
+	Create(movie *model.Movie) (primitive.ObjectID, error)
+	GetByID(id primitive.ObjectID) (*model.Movie, error)
+	GetAll() ([]model.Movie, error)
+	Update(id primitive.ObjectID, update bson.M) error
+	Delete(id primitive.ObjectID) error
+	CountByDirectorID(id primitive.ObjectID) (int64, error)
+	CountByActorID(id primitive.ObjectID) (int64, error)
+	GetByActor(
+		actorID primitive.ObjectID,
+		pagination *utils.Pagination,
+		projection bson.M,
+	) ([]bson.M, error)
+	GetByDirector(
+		directorID primitive.ObjectID,
+		pagination *utils.Pagination,
+		projection bson.M,
+	) ([]bson.M, error)
+}
+
 type MovieRepository struct {
 	movies    *mongo.Collection
 	actors    *mongo.Collection
 	directors *mongo.Collection
 }
 
-func NewMovieRepository(db *mongo.Database) *MovieRepository {
+func NewMovieRepository(db *mongo.Database) IMovieRepository {
 	return &MovieRepository{
 		movies:    db.Collection("movie"),
 		actors:    db.Collection("actors"),

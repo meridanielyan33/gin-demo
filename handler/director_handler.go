@@ -15,10 +15,10 @@ import (
 )
 
 type DirectorHandler struct {
-	service *services.DirectorService
+	service services.IDirectorService
 }
 
-func NewDirectorHandler(service *services.DirectorService) *DirectorHandler {
+func NewDirectorHandler(service services.IDirectorService) *DirectorHandler {
 	return &DirectorHandler{service: service}
 }
 

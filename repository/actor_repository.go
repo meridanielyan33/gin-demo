@@ -15,7 +15,16 @@ type ActorRepository struct {
 	collection *mongo.Collection
 }
 
-func NewActorRepository(db *mongo.Database) *ActorRepository {
+type IActorRepository interface {
+	Create(actor *model.Actor) (primitive.ObjectID, error)
+	GetByID(id primitive.ObjectID) (*model.Actor, error)
+	GetByIDs(ids []primitive.ObjectID) ([]model.Actor, error)
+	GetAll() ([]model.Actor, error)
+	Update(id primitive.ObjectID, update bson.M) error
+	Delete(id primitive.ObjectID) error
+}
+
+func NewActorRepository(db *mongo.Database) IActorRepository {
 	return &ActorRepository{collection: db.Collection("actors")}
 }
 

@@ -8,11 +8,19 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-type DirectorService struct {
-	repo *repository.DirectorRepository
+type IDirectorService interface {
+	Create(director *model.Director) (primitive.ObjectID, error)
+	GetByID(id primitive.ObjectID) (*model.Director, error)
+	GetAll() ([]model.Director, error)
+	Update(id primitive.ObjectID, update bson.M) error
+	Delete(id primitive.ObjectID) error
 }
 
-func NewDirectorService(repo *repository.DirectorRepository) *DirectorService {
+type DirectorService struct {
+	repo repository.IDirectorRepository
+}
+
+func NewDirectorService(repo repository.IDirectorRepository) IDirectorService {
 	return &DirectorService{repo: repo}
 }
 

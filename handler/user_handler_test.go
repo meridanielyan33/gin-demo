@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 	"gin-demo/handler"
-	"gin-demo/mocks"
 	"gin-demo/model"
 	services "gin-demo/services"
+	svcMocks "gin-demo/services/mocks"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -17,7 +17,7 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-func setupRouter(handler *handler.Handler) *gin.Engine {
+func setupUserRouter(handler *handler.Handler) *gin.Engine {
 	r := gin.Default()
 	r.POST("/api/login", handler.Login)
 	r.POST("/api/logout", handler.Logout)
@@ -29,7 +29,7 @@ func setupRouter(handler *handler.Handler) *gin.Engine {
 }
 
 func TestLogin_Success(t *testing.T) {
-	mockService := new(mocks.UserService)
+	mockService := new(svcMocks.IUserService)
 	userServiceFacade := services.NewUserServiceFacade(mockService)
 	handler := handler.NewHandler(*userServiceFacade)
 
@@ -46,7 +46,7 @@ func TestLogin_Success(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 
 	w := httptest.NewRecorder()
-	r := setupRouter(handler)
+	r := setupUserRouter(handler)
 	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
@@ -55,21 +55,21 @@ func TestLogin_Success(t *testing.T) {
 }
 
 func TestLogin_InvalidRequest(t *testing.T) {
-	mockService := new(mocks.UserService)
+	mockService := new(svcMocks.IUserService)
 	userServiceFacade := services.NewUserServiceFacade(mockService)
 	handler := handler.NewHandler(*userServiceFacade)
 	req, _ := http.NewRequest(http.MethodPost, "/api/login", bytes.NewBufferString("{invalid-json}"))
 	req.Header.Set("Content-Type", "application/json")
 
 	w := httptest.NewRecorder()
-	r := setupRouter(handler)
+	r := setupUserRouter(handler)
 	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 }
 
 func TestLogin_ServiceError(t *testing.T) {
-	mockService := new(mocks.UserService)
+	mockService := new(svcMocks.IUserService)
 	userServiceFacade := services.NewUserServiceFacade(mockService)
 	handler := handler.NewHandler(*userServiceFacade)
 	reqBody := model.UserLoginRequest{
@@ -83,7 +83,7 @@ func TestLogin_ServiceError(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 
 	w := httptest.NewRecorder()
-	r := setupRouter(handler)
+	r := setupUserRouter(handler)
 	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusForbidden, w.Code)
@@ -91,7 +91,7 @@ func TestLogin_ServiceError(t *testing.T) {
 }
 
 func TestLogout_Success(t *testing.T) {
-	mockService := new(mocks.UserService)
+	mockService := new(svcMocks.IUserService)
 	userServiceFacade := services.NewUserServiceFacade(mockService)
 	handler := handler.NewHandler(*userServiceFacade)
 	gin.SetMode(gin.TestMode)
@@ -110,7 +110,7 @@ func TestLogout_Success(t *testing.T) {
 }
 
 func TestLogout_Error(t *testing.T) {
-	mockService := new(mocks.UserService)
+	mockService := new(svcMocks.IUserService)
 	userServiceFacade := services.NewUserServiceFacade(mockService)
 	handler := handler.NewHandler(*userServiceFacade)
 	w := httptest.NewRecorder()
@@ -125,7 +125,7 @@ func TestLogout_Error(t *testing.T) {
 }
 
 func TestRegister_Success(t *testing.T) {
-	mockService := new(mocks.UserService)
+	mockService := new(svcMocks.IUserService)
 	userServiceFacade := services.NewUserServiceFacade(mockService)
 	handler := handler.NewHandler(*userServiceFacade)
 	user := model.User{
@@ -141,7 +141,7 @@ func TestRegister_Success(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 
 	w := httptest.NewRecorder()
-	r := setupRouter(handler)
+	r := setupUserRouter(handler)
 	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
@@ -149,7 +149,7 @@ func TestRegister_Success(t *testing.T) {
 }
 
 func TestRegister_Error(t *testing.T) {
-	mockService := new(mocks.UserService)
+	mockService := new(svcMocks.IUserService)
 	userServiceFacade := services.NewUserServiceFacade(mockService)
 	handler := handler.NewHandler(*userServiceFacade)
 	user := model.User{Email: "bad@example.com"}
@@ -160,14 +160,14 @@ func TestRegister_Error(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 
 	w := httptest.NewRecorder()
-	r := setupRouter(handler)
+	r := setupUserRouter(handler)
 	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusForbidden, w.Code)
 }
 
 func TestGetUsers_Success(t *testing.T) {
-	mockService := new(mocks.UserService)
+	mockService := new(svcMocks.IUserService)
 	userServiceFacade := services.NewUserServiceFacade(mockService)
 	handler := handler.NewHandler(*userServiceFacade)
 	users := []model.User{{Email: "a@example.com"}, {Email: "b@example.com"}}
@@ -185,7 +185,7 @@ func TestGetUsers_Success(t *testing.T) {
 }
 
 func TestGetAuthenticatedUser_Success(t *testing.T) {
-	mockService := new(mocks.UserService)
+	mockService := new(svcMocks.IUserService)
 	userServiceFacade := services.NewUserServiceFacade(mockService)
 	handler := handler.NewHandler(*userServiceFacade)
 	user := &model.User{Email: "me@example.com"}
@@ -201,7 +201,7 @@ func TestGetAuthenticatedUser_Success(t *testing.T) {
 }
 
 func TestGetUserById_Success(t *testing.T) {
-	mockService := new(mocks.UserService)
+	mockService := new(svcMocks.IUserService)
 	userServiceFacade := services.NewUserServiceFacade(mockService)
 	handler := handler.NewHandler(*userServiceFacade)
 	user := &model.User{
@@ -212,7 +212,7 @@ func TestGetUserById_Success(t *testing.T) {
 
 	req, _ := http.NewRequest(http.MethodGet, "/api/user/1", nil)
 	w := httptest.NewRecorder()
-	r := setupRouter(handler)
+	r := setupUserRouter(handler)
 	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
@@ -220,26 +220,26 @@ func TestGetUserById_Success(t *testing.T) {
 }
 
 func TestGetUserById_InvalidID(t *testing.T) {
-	mockService := new(mocks.UserService)
+	mockService := new(svcMocks.IUserService)
 	userServiceFacade := services.NewUserServiceFacade(mockService)
 	handler := handler.NewHandler(*userServiceFacade)
 	req, _ := http.NewRequest(http.MethodGet, "/api/user/abc", nil)
 	w := httptest.NewRecorder()
-	r := setupRouter(handler)
+	r := setupUserRouter(handler)
 	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 }
 
 func TestGetUserById_NotFound(t *testing.T) {
-	mockService := new(mocks.UserService)
+	mockService := new(svcMocks.IUserService)
 	userServiceFacade := services.NewUserServiceFacade(mockService)
 	handler := handler.NewHandler(*userServiceFacade)
 	mockService.On("GetUserById", "99").Return(nil, errors.New("user not found"))
 
 	req, _ := http.NewRequest(http.MethodGet, "/api/user/99", nil)
 	w := httptest.NewRecorder()
-	r := setupRouter(handler)
+	r := setupUserRouter(handler)
 	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusNotFound, w.Code)

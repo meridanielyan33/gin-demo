@@ -15,10 +15,10 @@ import (
 )
 
 type ActorHandler struct {
-	service services.ActorService
+	service services.IActorService
 }
 
-func NewActorHandler(service services.ActorService) *ActorHandler {
+func NewActorHandler(service services.IActorService) *ActorHandler {
 	return &ActorHandler{service: service}
 }
 

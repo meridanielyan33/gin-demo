@@ -5,9 +5,9 @@ import (
 	"errors"
 	"gin-demo/config"
 	"gin-demo/middleware"
-	"gin-demo/mocks"
 	"gin-demo/model"
 	"gin-demo/redis_utils"
+	repoMocks "gin-demo/repository/mocks"
 	services "gin-demo/services"
 	"testing"
 
@@ -16,12 +16,13 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"golang.org/x/crypto/bcrypt"
 )
 
 func TestRegister_Success(t *testing.T) {
 	config.InitTestConfig("testsecret")
-	mockRepo := new(mocks.UserRepository)
+	mockRepo := new(repoMocks.IUserRepository)
 	jwtStrategy := middleware.NewJWTStrategy(redis_utils.GetRedisClient())
 	svc := services.NewUserService(mockRepo, *jwtStrategy)
 
@@ -40,7 +41,7 @@ func TestRegister_Success(t *testing.T) {
 
 func TestRegister_Failure(t *testing.T) {
 	config.InitTestConfig("testsecret")
-	mockRepo := new(mocks.UserRepository)
+	mockRepo := new(repoMocks.IUserRepository)
 	jwtStrategy := middleware.NewJWTStrategy(redis_utils.GetRedisClient())
 	svc := services.NewUserService(mockRepo, *jwtStrategy)
 
@@ -61,7 +62,7 @@ func TestRegister_Failure(t *testing.T) {
 func TestLogin_Success(t *testing.T) {
 	config.InitTestConfig("testsecret")
 
-	mockRepo := new(mocks.UserRepository)
+	mockRepo := new(repoMocks.IUserRepository)
 	rdb := redis.NewClient(&redis.Options{
 		Addr: "localhost:6379",
 		DB:   1,
@@ -92,7 +93,7 @@ func TestLogin_Success(t *testing.T) {
 func TestLogin_WrongPassword(t *testing.T) {
 	config.InitTestConfig("testsecret")
 
-	mockRepo := new(mocks.UserRepository)
+	mockRepo := new(repoMocks.IUserRepository)
 	rdb, _ := redismock.NewClientMock()
 	jwtStrategy := middleware.NewJWTStrategy(rdb)
 	svc := services.NewUserService(mockRepo, *jwtStrategy)
@@ -117,7 +118,7 @@ func TestLogin_WrongPassword(t *testing.T) {
 
 func TestLogin_RepoError(t *testing.T) {
 	config.InitTestConfig("testsecret")
-	mockRepo := new(mocks.UserRepository)
+	mockRepo := new(repoMocks.IUserRepository)
 	rdb, _ := redismock.NewClientMock()
 	jwtStrategy := middleware.NewJWTStrategy(rdb)
 	svc := services.NewUserService(mockRepo, *jwtStrategy)
@@ -135,7 +136,7 @@ func TestLogin_RepoError(t *testing.T) {
 
 func TestLogout_Success(t *testing.T) {
 	config.InitTestConfig("testsecret")
-	mockRepo := new(mocks.UserRepository)
+	mockRepo := new(repoMocks.IUserRepository)
 	rdb, mockRedis := redismock.NewClientMock()
 	jwtStrategy := middleware.NewJWTStrategy(rdb)
 	svc := services.NewUserService(mockRepo, *jwtStrategy)
@@ -158,7 +159,7 @@ func TestLogout_Success(t *testing.T) {
 
 func TestLogout_StrategyError(t *testing.T) {
 	config.InitTestConfig("testsecret")
-	mockRepo := new(mocks.UserRepository)
+	mockRepo := new(repoMocks.IUserRepository)
 	rdb, mockRedis := redismock.NewClientMock()
 	jwtStrategy := middleware.NewJWTStrategy(rdb)
 	svc := services.NewUserService(mockRepo, *jwtStrategy)
@@ -181,7 +182,7 @@ func TestLogout_StrategyError(t *testing.T) {
 func TestLogout_UserNotFound(t *testing.T) {
 	config.InitTestConfig("testsecret")
 
-	mockRepo := new(mocks.UserRepository)
+	mockRepo := new(repoMocks.IUserRepository)
 	rdb, _ := redismock.NewClientMock()
 	jwtStrategy := middleware.NewJWTStrategy(rdb)
 	svc := services.NewUserService(mockRepo, *jwtStrategy)
@@ -200,7 +201,7 @@ func TestLogout_UserNotFound(t *testing.T) {
 func TestGetUsers(t *testing.T) {
 	config.InitTestConfig("testsecret")
 
-	mockRepo := new(mocks.UserRepository)
+	mockRepo := new(repoMocks.IUserRepository)
 	rdb, _ := redismock.NewClientMock()
 	jwtStrategy := middleware.NewJWTStrategy(rdb)
 	svc := services.NewUserService(mockRepo, *jwtStrategy)
@@ -221,7 +222,7 @@ func TestGetUsers(t *testing.T) {
 
 func TestGetUsers_Failure(t *testing.T) {
 	config.InitTestConfig("testsecret")
-	mockRepo := new(mocks.UserRepository)
+	mockRepo := new(repoMocks.IUserRepository)
 	rdb, _ := redismock.NewClientMock()
 	jwtStrategy := middleware.NewJWTStrategy(rdb)
 	svc := services.NewUserService(mockRepo, *jwtStrategy)
@@ -235,7 +236,7 @@ func TestGetUsers_Failure(t *testing.T) {
 
 func TestGetUserById(t *testing.T) {
 	config.InitTestConfig("testsecret")
-	mockRepo := new(mocks.UserRepository)
+	mockRepo := new(repoMocks.IUserRepository)
 	rdb, _ := redismock.NewClientMock()
 	jwtStrategy := middleware.NewJWTStrategy(rdb)
 	svc := services.NewUserService(mockRepo, *jwtStrategy)
@@ -252,7 +253,7 @@ func TestGetUserById(t *testing.T) {
 
 func TestGetUserById_LettersNotAllowed(t *testing.T) {
 	config.InitTestConfig("testsecret")
-	mockRepo := new(mocks.UserRepository)
+	mockRepo := new(repoMocks.IUserRepository)
 	rdb, _ := redismock.NewClientMock()
 	jwtStrategy := middleware.NewJWTStrategy(rdb)
 	svc := services.NewUserService(mockRepo, *jwtStrategy)
@@ -266,15 +267,14 @@ func TestGetUserById_LettersNotAllowed(t *testing.T) {
 
 func TestGetUserById_NotFound(t *testing.T) {
 	config.InitTestConfig("testsecret")
-	mockRepo := new(mocks.UserRepository)
+	mockRepo := new(repoMocks.IUserRepository)
 	rdb, _ := redismock.NewClientMock()
 	jwtStrategy := middleware.NewJWTStrategy(rdb)
 	svc := services.NewUserService(mockRepo, *jwtStrategy)
 
 	mockRepo.On("FindById", "999").
 		Return(nil, errors.New("user not found"))
-
-	user, err := svc.GetUserById("999")
+	user, err := svc.GetUserById(primitive.NewObjectID())
 
 	require.Error(t, err)
 	require.Nil(t, user)
@@ -285,7 +285,7 @@ func TestGetUserById_NotFound(t *testing.T) {
 
 func TestGetUserByEmail(t *testing.T) {
 	config.InitTestConfig("testsecret")
-	mockRepo := new(mocks.UserRepository)
+	mockRepo := new(repoMocks.IUserRepository)
 	rdb, _ := redismock.NewClientMock()
 	jwtStrategy := middleware.NewJWTStrategy(rdb)
 	svc := services.NewUserService(mockRepo, *jwtStrategy)
@@ -311,7 +311,7 @@ func TestGetUserByEmail(t *testing.T) {
 func TestGetUserByEmail_NotFound(t *testing.T) {
 	config.InitTestConfig("testsecret")
 
-	mockRepo := new(mocks.UserRepository)
+	mockRepo := new(repoMocks.IUserRepository)
 	rdb, _ := redismock.NewClientMock()
 	jwtStrategy := middleware.NewJWTStrategy(rdb)
 	svc := services.NewUserService(mockRepo, *jwtStrategy)

@@ -15,7 +15,15 @@ type DirectorRepository struct {
 	collection *mongo.Collection
 }
 
-func NewDirectorRepository(db *mongo.Database) *DirectorRepository {
+type IDirectorRepository interface {
+	Create(director *model.Director) (primitive.ObjectID, error)
+	GetByID(id primitive.ObjectID) (*model.Director, error)
+	GetAll() ([]model.Director, error)
+	Update(id primitive.ObjectID, update bson.M) error
+	Delete(id primitive.ObjectID) error
+}
+
+func NewDirectorRepository(db *mongo.Database) IDirectorRepository {
 	return &DirectorRepository{collection: db.Collection("directors")}
 }
 

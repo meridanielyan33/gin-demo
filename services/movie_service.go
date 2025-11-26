@@ -9,12 +9,35 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+type IMovieService interface {
+	Create(movie *model.Movie) (primitive.ObjectID, error)
+	GetByID(id primitive.ObjectID) (*model.MovieResponse, error)
+	GetAll() ([]model.MovieResponse, error)
+	Update(id primitive.ObjectID, update bson.M) error
+	Delete(id primitive.ObjectID) error
+	GetByDirector(
+		directorID primitive.ObjectID,
+		pagination *utils.Pagination,
+		projection bson.M,
+	) ([]bson.M, int64, error)
+	GetByActor(
+		directorID primitive.ObjectID,
+		pagination *utils.Pagination,
+		projection bson.M,
+	) ([]bson.M, int64, error)
+	hydrateRawMovies(
+		rawMovies []bson.M,
+		projection bson.M,
+		opts repository.HydrationOptions,
+	) ([]bson.M, error)
+}
+
 type MovieService struct {
-	repo     *repository.MovieRepository
+	repo     repository.IMovieRepository
 	hydrator *repository.MovieHydrator
 }
 
-func NewMovieService(repo *repository.MovieRepository, hydrator *repository.MovieHydrator) *MovieService {
+func NewMovieService(repo repository.IMovieRepository, hydrator *repository.MovieHydrator) IMovieService {
 	return &MovieService{repo: repo, hydrator: hydrator}
 }
 
